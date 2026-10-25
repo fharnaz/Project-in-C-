@@ -1,121 +1,80 @@
+﻿#include "ExpenseManager.h"
 
-#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <string>
-#include <vector>
-
-struct Expense {
-    std::string description;
-    std::string category;
-    double amount;
-};
-
-const std::string FILE_NAME = "expenses.csv";
-
-void saveExpenses(const std::vector<Expense>& expenses) {
-    std::ofstream file(FILE_NAME);
-
-    if (!file) {
-        std::cerr << "Error: Could not save expenses.\n";
-        return;
-    }
-
-    for (const Expense& expense : expenses) {
-        file << std::quoted(expense.description) << ','
-             << std::quoted(expense.category) << ','
-             << expense.amount << '\n';
-    }
-}
-
-void loadExpenses(std::vector<Expense>& expenses) {
-    std::ifstream file(FILE_NAME);
-
-    if (!file) {
-        return; // The file will be created when we save.
-    }
-
-    Expense expense{};
-
-    while (file >> std::quoted(expense.description)
-                && file.ignore(1, ',')
-                && file >> std::quoted(expense.category)
-                && file.ignore(1, ',')
-                && file >> expense.amount) {
-        expenses.push_back(expense);
-    }
-}
 
 int main() {
-    std::vector<Expense> expenses;
-    loadExpenses(expenses);
+    ExpenseManager manager("expenses.csv");
 
     int choice = 0;
 
-    while (choice != 4) {
-        std::cout << "\n===== EXPENSE TRACKER =====\n";
-        std::cout << "1. Add expense\n";
+    std::cout << "================================\n";
+    std::cout << "      C++ EXPENSE TRACKER\n";
+    std::cout << "================================\n";
+
+    while (true) {
+        std::cout << "\n1. Add expense\n";
         std::cout << "2. View expenses\n";
         std::cout << "3. Show total spending\n";
         std::cout << "4. Exit\n";
         std::cout << "Choose an option: ";
 
         if (!(std::cin >> choice)) {
-            std::cout << "Invalid input. Please enter a number.\n";
-            return 1;
+            std::cout << "Please enter a valid menu number.\n";
+            std::cin.clear();
+            std::cin.ignore(
+                std::numeric_limits<std::streamsize>::max(), '\n');
+            continue;
         }
 
+        std::cin.ignore(
+            std::numeric_limits<std::streamsize>::max(), '\n');
+
         if (choice == 1) {
-            Expense expense{};
+            std::string description;
+            std::string category;
+            double amount = 0.0;
 
-            std::cout << "Description: ";
-            std::getline(std::cin >> std::ws, expense.description);
+            std::cout << "Enter description: ";
+            std::getline(std::cin, description);
 
-            std::cout << "Category: ";
-            std::getline(std::cin, expense.category);
+            std::cout << "Enter category: ";
+            std::getline(std::cin, category);
 
-            std::cout << "Amount (EUR): ";
+            std::cout << "Enter amount in EUR: ";
 
-            if (!(std::cin >> expense.amount) ||
-                expense.amount <= 0) {
-                std::cout << "Please enter a valid positive amount.\n";
-                return 1;
+            if (!(std::cin >> amount)) {
+                std::cout << "Invalid amount. Please enter a number.\n";
+                std::cin.clear();
+                std::cin.ignore(
+                    std::numeric_limits<std::streamsize>::max(), '\n');
+                continue;
             }
 
-            expenses.push_back(expense);
-            saveExpenses(expenses);
+            std::cin.ignore(
+                std::numeric_limits<std::streamsize>::max(), '\n');
 
-            std::cout << "Expense added and saved successfully!\n";
+            if (description.empty() || category.empty() || amount <= 0) {
+                std::cout << "Description and category cannot be empty, "
+                          << "and amount must be positive.\n";
+                continue;
+            }
 
+            manager.addExpense(Expense(description, category, amount));
+            std::cout << "Expense added successfully.\n";
         } else if (choice == 2) {
-            if (expenses.empty()) {
-                std::cout << "No expenses recorded yet.\n";
-            }
-
-            for (std::size_t i = 0; i < expenses.size(); ++i) {
-                std::cout << i + 1 << ". "
-                          << expenses[i].description
-                          << " | " << expenses[i].category
-                          << " | EUR "
-                          << std::fixed << std::setprecision(2)
-                          << expenses[i].amount << '\n';
-            }
-
+            manager.displayExpenses();
         } else if (choice == 3) {
-            double total = 0.0;
-
-            for (const Expense& expense : expenses) {
-                total += expense.amount;
-            }
-
             std::cout << std::fixed << std::setprecision(2);
-            std::cout << "Total spending: EUR " << total << '\n';
-
+            std::cout << "Total spending: EUR "
+                      << manager.getTotalSpending() << '\n';
         } else if (choice == 4) {
             std::cout << "Thank you for using Expense Tracker!\n";
-
+            break;
         } else {
-            std::cout << "Invalid option. Choose 1-4.\n";
+            std::cout << "Invalid option. Choose 1, 2, 3, or 4.\n";
         }
     }
 
